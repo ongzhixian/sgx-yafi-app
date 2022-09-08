@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ZX custom
+**/mk.ps1
+**/ako.ps1
