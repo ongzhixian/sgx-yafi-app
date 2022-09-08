@@ -1,0 +1,45 @@
+# Run one of the following to run
+# kubectl run alpine-sh --rm -it --image=alpine:3.16 -- sh
+# kubectl run -i --rm --tty debug --image=alpine:3.16 --restart=Never -- sh
+# kubectl exec pp -it -- bash
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pp
+spec:
+  terminationGracePeriodSeconds: 0
+  volumes:
+  - name: cloud-amqp-secret
+    secret:
+      secretName: cloud-amqp-secret
+      items:
+      - key: .cloudampq.json
+        path: .cloudampq.json
+      optional: false # default: false (secret must exist)
+  - name: database-config-secret
+    secret:
+      secretName: database-config-secret
+      items:
+      - key: .database-config.json
+        path: .database-config.json
+      optional: false # default: false (secret must exist)
+  - name: generic-128mi-fileshare
+    persistentVolumeClaim:
+      claimName: generic-128mi-pvc
+  containers:
+  - image: python:3.7-slim
+    name: python37
+    resources:
+      limits:
+        cpu: 100m     # the CPU limit is define in milicore (m)
+        memory: 100Mi # the Memory is define in Mebibytes (Mi)
+    volumeMounts:
+    - name: cloud-amqp-secret
+      mountPath: "/mnt/secrets/amqp"
+      readOnly: true
+    - name: database-config-secret
+      mountPath: "/mnt/secrets/database"
+      readOnly: true
+    - name: generic-128mi-fileshare
+      mountPath: /usr/share/generic-128mi
+    command: [ '/bin/bash', '-c', 'sleep inf' ]

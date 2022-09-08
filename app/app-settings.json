@@ -1,0 +1,28 @@
+{
+    "is_development": true,
+    "logging": {
+        "pika" : "WARNING"
+    },
+    "RESERVED_out_path": {
+        "RESERVED_chart_json": "./logs/forum_app.log"
+    },
+    "RESERVED_secrets_path": {
+        "RESERVED_cloud_amqp": "/mnt/secrets/cloud-amqp/.cloud_amqp.json"
+    },
+    "rabbit_mq": {
+        "sgx-isin":
+        {
+            "exchange_name": "",
+            "routing_key": "",
+            "queue_name": ""
+        }
+    },
+    "mysql" : {
+		"dev_forum": {
+			"HOST"	   : "172.31.163.117",
+			"PORT"	   : 3306,
+			"DATABASE" : "forum",
+			"USERNAME" : "root"
+		}
+	}
+}
