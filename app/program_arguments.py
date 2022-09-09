@@ -98,9 +98,6 @@ def get_settings_from_arguments():
     cloud_amqp_config_file_path = args['cloud-amqp-config']
     database_config_file_path = args['database-config']
     save_file_directory = args['save-path']
-    # print(cloud_amqp_config_file_path)
-    # print(database_config_file_path)
-    # print(save_file_directory)
     return (get_amqp_url_parameters(cloud_amqp_config_file_path),
         get_database_settings(database_config_file_path),
         get_save_file_full_path(save_file_directory))

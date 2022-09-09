@@ -28,4 +28,4 @@ COPY ./app .
 RUN /usr/local/bin/python -m pip install --upgrade  pip && pip install -r requirements.txt
 
 ENTRYPOINT [ "python" ] 
-CMD [ "main.py", "/mnt/secrets/amqp/.cloudampq.json", "/mnt/secrets/database/.database-config.json", "/usr/share/generic-128mi/sgx/json" ]
+CMD [ "main.py", "/mnt/secrets/amqp/.cloudampq.json", "/mnt/secrets/database/.database-config.json", "/usr/share/generic-128mi/yahoo-finance/sgx" ]

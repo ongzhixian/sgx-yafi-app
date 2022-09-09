@@ -20,10 +20,15 @@ import pika
 from logger import Logger
 from program_arguments import get_settings_from_arguments
 
+# 
+# financial_instrument
+# └───fetch.yahoo-finance.price
+#     └───fetch_yahoo_finance_price
 
 EXCHANGE_NAME = 'financial_instrument'
 ROUTING_KEY = "yafi.fetch"
 QUEUE_NAME = 'yafi_fetch'
+
 
 def setup_logging():
     logging.getLogger('pika').setLevel(logging.WARNING)
@@ -31,51 +36,78 @@ def setup_logging():
     return log
 
 
-def save_sgx_isin_to_file(data):
-    FILE_DATETIME = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-    FILE_NAME = f'sgx-isin-{FILE_DATETIME}.txt'
-    SAVE_FILE_PATH = path.join(output_path, FILE_NAME)
-    with open(SAVE_FILE_PATH, 'w', encoding='utf-8') as out_file:
-        out_file.write(data)
-
-
 def blacklist(ticker):
     logging.warn(f"TODO: Blacklist ticker {ticker}.")
 
 
-def fetch_chart_json_from_yafi(yami_ticker, range='max', granularity='1mo'):
-    app_path = ''
-    logging.info(f"Fetching chart data from YAFI: {yami_ticker}")
-    data_file_name = f'{yami_ticker}-{range}-{granularity}.json'
-    out_file_path = path.join(app_path, 'data-dump', data_file_name)
-    if path.exists(out_file_path):
-        return True # Skip
-    # There are a couple of URLs used to get the SGX data from Yahoo Finance.
-    # https://query1.finance.yahoo.com/v8/finance/chart/BN4.SI
-    api_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yami_ticker}?range={range}&granularity={granularity}"
+# def fetch_chart_json_from_yafi(yami_ticker, range='max', granularity='1mo'):
+#     app_path = ''
+#     logging.info(f"Fetching chart data from YAFI: {yami_ticker}")
+#     data_file_name = f'{yami_ticker}-{range}-{granularity}.json'
+#     out_file_path = path.join(app_path, 'data-dump', data_file_name)
+#     if path.exists(out_file_path):
+#         return True # Skip
+#     # There are a couple of URLs used to get the SGX data from Yahoo Finance.
+#     # https://query1.finance.yahoo.com/v8/finance/chart/BN4.SI
+#     api_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yami_ticker}?range={range}&granularity={granularity}"
+#     request = url_request(api_url)
+#     try:
+#         with url_open(request) as response:
+#             response_data = response.read().decode("utf-8")
+#         save_price_data_to_file(data_file_name, json_data)
+#         json_data = json.loads(response_data)
+        
+#         return True
+#     except Exception:
+#         return False
+
+
+def save_price_data_to_file(ticker, data):
+    FILE_DATETIME = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    FILE_NAME = f'{ticker}-{FILE_DATETIME}.json'
+    SAVE_FILE_PATH = path.join(output_path, FILE_NAME)
+    with open(SAVE_FILE_PATH, 'w', encoding='utf-8') as out_file:
+        out_file.write(data)
+    log.info("Price data saved", source="save_price_data_to_file()", event="save", data_length=len(data), ticker=ticker)
+
+def fetch_price_data(ticker):
+    ric_suffix = "SI"
+    yami_ticker = f"{ticker}.{ric_suffix}"
+    data_range='max'
+    data_granularity='1mo'
+    api_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yami_ticker}?range={data_range}&granularity={data_granularity}"
     request = url_request(api_url)
     try:
         with url_open(request) as response:
-            json_data = json.loads(response.read().decode("utf-8"))
-        dump_json_data_to_file(data_file_name, json_data)
-        return True
+            log.info("Price data fetched", source="fetch_price_data()", event="response", status=response.status, ticker=ticker)
+            response_data = response.read().decode("utf-8")
+        save_price_data_to_file(ticker, response_data)
+        return response_data
     except Exception:
-        return False
+        return None
 
 
-def download_yafi_chart_json(ticker):
-    log.debug(f"Simulate 'download_yafi_chart_json' for {ticker}")
-    ric_suffix = "SI"
-    yami_ticker = f"{ticker}.{ric_suffix}"
-    if not fetch_chart_json_from_yafi(yami_ticker):
-        blacklist(ticker)
+def publish_parsed_price_data(json_data):
+    log.info("TODO: publish_parsed_price_data")
+
+
+def parse_and_publish_price_data(response_data):
+    try:
+        json_data = json.loads(response_data)
+        publish_parsed_price_data(json_data)
+    except Exception:
+        return None
 
 
 def process_message(channel, method, properties, body):
-    text_content = body.decode('utf-8')
-    download_yafi_chart_json(text_content)
-    channel.basic_ack(delivery_tag=method.delivery_tag)
-    log.info("Received message", source="program", event="receive", content=text_content)
+    log.info("Received message")
+    ticker = body.decode('utf-8')
+    response_data = fetch_price_data(ticker)
+    if response_data is None:
+        blacklist(ticker)
+    parse_and_publish_price_data(response_data)
+    # channel.basic_ack(delivery_tag=method.delivery_tag)
+    log.info("Message processed", source="program", event="processed", content=ticker)
 
 
 def setup_rabbit_mq(channel):
